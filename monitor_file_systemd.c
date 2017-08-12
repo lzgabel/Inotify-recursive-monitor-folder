@@ -287,6 +287,9 @@ main(int argc,char *argv[])
 {
     int                watch_fd;
     int                mask=IN_CREATE|IN_DELETE;
+    if (argc < 2) {
+	    exit(EXIT_FAILURE);
+    }
     char               *watch_directory=argv[1];
     init_daemon();
     // daemone(0,0); 系统调用
