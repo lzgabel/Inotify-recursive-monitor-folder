@@ -16,9 +16,9 @@ inotify只能监控单层目录变化，不能监控子目录中的变化情况�
 ####    添加:
    *   cp monitor_file_system.sh /etc/init.d
    *   cd /etc/init.d
-   *    update-rc.d monitor_file_system.sh defaults'
+   *   sudo update-rc.d monitor_file_system.sh defaults'
  ####   删除:
-   *    update-rc.d -f monitor_file_system.sh remove
+   *    sudo update-rc.d -f monitor_file_system.sh remove
 ## 使用:
    *    service monitor_file_system { start | stop | restart | status }
    *    /etc/init.d/monitor_file_system { start | stop | restart | status }
