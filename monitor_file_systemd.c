@@ -1,9 +1,9 @@
 /*************************************************************************
-	> File Name: monitor_file_systemd.c
+	> File Name: daemon.c
 	> Author: lzgabel
 	> Mail: lz19960321lz@163.com
 	> Created Time: 2017年08月05日 星期六 20时19分55秒
-        > 守护进程实时监听文件状态，删除文件中所有\r
+    > 守护进程实时监听文件状态，删除文件中所有\r
 
  ************************************************************************/
 
@@ -110,7 +110,19 @@ add_watch(int watch_fd, char *dir, int mask)
             sprintf(subdir, "%s/%s", dir, dirent->d_name);
             add_watch(watch_fd, subdir, mask);
             free(subdir);
+        } 
+        /*处理已存在文件
+       if (dirent->d_type == DT_REG )
+        { 
+            FILE *fp;
+            char     *file_name = (char *)malloc(BUFSIZ*sizeof(char));
+            char     *cmd_string = (char *)malloc(BUFSIZ*sizeof(char));
+            sprintf(file_name, "%s/%s", dir, dirent->d_name);
+            sprintf(cmd_string, "sed -i \"s/\\r//g\" %s", file_name);
+	    fp = popen(cmd_string, "r");
+            pclose(fp);
         }
+        */
     }
     closedir(odir);
     return;
@@ -209,34 +221,20 @@ watch_dir(int watch_fd, int mask)
                         FILE     *fp;
                         char     *file_name = (char *)malloc(BUFSIZ*sizeof(char));
                         char     *cmd_string = (char *)malloc(BUFSIZ*sizeof(char));
-                        char     *temp_file_name = (char *)malloc(BUFSIZ*sizeof(char));
                         char     *dir = (char *)malloc(BUFSIZ*sizeof(char));
                         dir = get_absolute_path(event);
+                        if (strncmp(event->name, "sed", 3) == 0)
+                            exit(EXIT_SUCCESS);
                         sprintf(file_name, "%s/%s", dir, event->name);
-                        sprintf(temp_file_name, "/tmp/%s.XXXXXX", event->name);
-                        fd_temp = mkstemp(temp_file_name);
-                        if (watch_fd == -1) {
-                            perror("create temp file faile");
-                            exit(EXIT_FAILURE);
-                        }
-                        sprintf(cmd_string, "cp %s  %s && tr -d \"\\r\" < %s > %s",
-                                file_name, temp_file_name, temp_file_name, file_name);
-
+                        sprintf(cmd_string, "sed -i \"s/\\r//g\" %s", file_name);
+                        fp = popen(cmd_string, "r");
                         fprintf(FP, "File [%s] was created in directory [%s]\n", event->name, dir);
+                        pclose(fp);
                         free(dir);
                         free(file_name);
                         close(fd_temp);
-                        fp = popen(cmd_string, "r");
-                        pclose(fp);
-                        unlink(temp_file_name);
-                        free(temp_file_name);
                         free(cmd_string);
                         exit(EXIT_SUCCESS);
-                    } else {
-                        cpid = wait(NULL);
-                        if (cpid == -1) {
-                            perror("Child process exit failed");
-                        }
                     }
 
                 }
@@ -287,12 +285,17 @@ main(int argc,char *argv[])
 {
     int                watch_fd;
     int                mask=IN_CREATE|IN_DELETE;
-    if (argc < 2) {
-	    exit(EXIT_FAILURE);
-    }
     char               *watch_directory=argv[1];
     init_daemon();
     // daemone(0,0); 系统调用
+    /**
+    初始化时处理当前已存在文件
+    struct sigaction sa;
+    sa.sa_handler = SIG_IGN;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGHUP|SIGCHLD,&sa,NULL);
+    */
     watch_fd = watch_init(watch_directory, mask);
     for (;;) {
             watch_dir(watch_fd, mask);
