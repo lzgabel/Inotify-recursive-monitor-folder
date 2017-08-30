@@ -21,17 +21,20 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <unistd.h>
+#include "ini.h"
 
 #define EVENT_SIZE (sizeof(struct inotify_event))
-#define WD_SIZE 65535  //监听目录个数
 
-struct wd_dir
+static int WD_SIZE; //监听事件个数
+static char watch_directory[BUFSIZ]; //目录
+
+typedef struct wd_dir
 {
     int     wd; //inotify_add_watch返回：Watch descriptor
     char    dirname[BUFSIZ]; //监控目录绝对路径
-};
+}*WD_DIR;
 
-struct wd_dir wd_array[WD_SIZE];
+WD_DIR wd_array;
 int wd_count = 0;  //事件发生个数
 
 void 
@@ -67,7 +70,10 @@ init_daemon()
     }
 
     //修改目录
-    chdir("/");
+    if (chdir("/") == -1) {
+        perror("Can't change directory");
+        exit(EXIT_FAILURE);
+    }
     //获取文件描述符最大值
     getrlimit(RLIMIT_NOFILE,&rl);
     //关闭不需要的文件描述符
@@ -92,7 +98,7 @@ add_watch(int watch_fd, char *dir, int mask)
         exit(EXIT_FAILURE);
     }
 
-    wd = wd_array[wd_count].wd = inotify_add_watch(watch_fd, dir, mask);
+    wd = wd_array[wd_count].wd =  inotify_add_watch(watch_fd, dir, mask);
     strcpy(wd_array[wd_count++].dirname, dir);
 
     if (wd == -1) {
@@ -217,7 +223,6 @@ watch_dir(int watch_fd, int mask)
                         perror("fork error");
                         exit(EXIT_FAILURE);
                     } else if (cpid == 0) {
-                        int      fd_temp;
                         FILE     *fp;
                         char     *file_name = (char *)malloc(BUFSIZ*sizeof(char));
                         char     *cmd_string = (char *)malloc(BUFSIZ*sizeof(char));
@@ -232,7 +237,6 @@ watch_dir(int watch_fd, int mask)
                         pclose(fp);
                         free(dir);
                         free(file_name);
-                        close(fd_temp);
                         free(cmd_string);
                         exit(EXIT_SUCCESS);
                     }
@@ -279,23 +283,35 @@ watch_init(char *root, int mask)
     return fd;
 }
 
+static int handler(void* user, const char* section, const char* name,
+                  const char* value)
+{
+    if(strncmp(name, "watch_directory", 15) == 0)
+        strcpy(watch_directory, value);
+    if(strncmp(name, "WD_SIZE", 7) == 0) {
+        WD_SIZE = atoi(value);
+        wd_array = (WD_DIR)malloc(sizeof(WD_DIR)*WD_SIZE);
+    }
+    return 1;
+}
 
 int
 main(int argc,char *argv[])
 {
     int                watch_fd;
+    int                error;
     int                mask=IN_CREATE|IN_DELETE;
-    char               *watch_directory=argv[1];
     init_daemon();
+    error = ini_parse("/usr/sbin/monitor_file_system/monitor_file_systemd.conf", handler, NULL);
+    if (error < 0) {
+        perror("Can't read config file");
+        exit(EXIT_FAILURE);
+    }
+    else if (error) {
+        perror("Bad config file !");
+        exit(EXIT_FAILURE);
+    }
     // daemone(0,0); 系统调用
-    /**
-    初始化时处理当前已存在文件
-    struct sigaction sa;
-    sa.sa_handler = SIG_IGN;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    sigaction(SIGHUP|SIGCHLD,&sa,NULL);
-    */
     watch_fd = watch_init(watch_directory, mask);
     for (;;) {
             watch_dir(watch_fd, mask);

@@ -14,8 +14,7 @@
 #Author: lzgabel
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DAEMON=/usr/sbin/monitor_file_systemd #the server's location 将monitor_file_systemd.c编译后存放路径
-DAEMON_ARGS="/home/acm506/test"   # Arguments to run the daemon(监控目录)
+DAEMON=/usr/sbin/monitor_file_system/monitor_file_systemd
 . /lib/lsb/init-functions
 
 start() {
@@ -24,7 +23,7 @@ start() {
             return 1
         else 
             echo "Starting monitor_file_systemd..."
-            $DAEMON $DAEMON_ARGS
+            $DAEMON
         fi
         return $?
 }
