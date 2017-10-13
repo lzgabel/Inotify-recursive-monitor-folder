@@ -301,7 +301,7 @@ main(int argc,char *argv[])
     int                watch_fd;
     int                error;
     int                mask=IN_CREATE|IN_DELETE;
-    //init_daemon();
+    init_daemon();
     error = ini_parse("/usr/sbin/monitor_file_system/monitor_file_systemd.conf", handler, NULL);
     if (error < 0) {
         perror("Can't read config file");
