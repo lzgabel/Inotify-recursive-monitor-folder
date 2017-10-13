@@ -4,7 +4,7 @@ OBJ = monitor_file_systemd.c
 CONF = monitor_file_systemd.conf
 SUB_OUT = libinih.so
 INCLUDES = -I.
-INSTALL_DIR = /usr/sbin/monitor_file_system/
+INSTALL_DIR = /usr/sbin/monitor_file_system
 CCFLAGS = -g -O2
 CC = gcc
 
@@ -26,4 +26,5 @@ uninstall:
 .PHONY : clean
 clean:
 	-rm -f $(OUT)
+	-rm -rf $(INSTALL_DIR)
 	cd $(SUB_DIR) && $(MAKE) clean
