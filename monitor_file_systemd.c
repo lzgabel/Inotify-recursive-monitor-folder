@@ -309,8 +309,8 @@ main(int argc,char *argv[])
     int                watch_fd;
     int                error;
     int                mask=IN_CREATE|IN_DELETE;
-    //init_daemon();
-    error = ini_parse("/home/acm506/Inotify-recursive-monitor-folder/monitor_file_systemd.conf", handler, NULL);
+    init_daemon();
+    error = ini_parse("/usr/sbin/monitor_file_system/monitor_file_systemd.conf", handler, NULL);
     if (error < 0) {
         perror("Can't read config file");
         exit(EXIT_FAILURE);
@@ -319,7 +319,7 @@ main(int argc,char *argv[])
         perror("Bad config file !");
         exit(EXIT_FAILURE);
     }
-    signal(SIGCHLD, sig_handler);
+    //signal(SIGCHLD, sig_handler);
     // daemone(0,0); 系统调用
     watch_fd = watch_init(watch_directory, mask);
     for (;;) {
