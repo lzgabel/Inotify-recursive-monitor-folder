@@ -38,6 +38,14 @@ WD_DIR wd_array;
 int wd_count = 0;  //事件发生个数
 
 void 
+sig_handler(int signo)
+{
+    if (signo == SIGCHLD)
+    {
+        wait(NULL);
+    }
+}
+void 
 init_daemon()
 {
     pid_t               pid;
@@ -74,6 +82,7 @@ init_daemon()
         perror("Can't change directory");
         exit(EXIT_FAILURE);
     }
+
     //获取文件描述符最大值
     getrlimit(RLIMIT_NOFILE,&rl);
     //关闭不需要的文件描述符
@@ -98,7 +107,7 @@ add_watch(int watch_fd, char *dir, int mask)
         exit(EXIT_FAILURE);
     }
 
-    wd = wd_array[wd_count].wd =  inotify_add_watch(watch_fd, dir, mask);
+    wd = wd_array[wd_count].wd = inotify_add_watch(watch_fd, dir, mask);
     strcpy(wd_array[wd_count++].dirname, dir);
 
     if (wd == -1) {
@@ -218,9 +227,9 @@ watch_dir(int watch_fd, int mask)
                     fprintf(FP, "Directory [%s] was created in directory [%s]\n", event->name, dir);
                     append_subdir(watch_fd, event, mask);
                 } else {
-                    pid_t    cpid;
+                    pid_t cpid;
                     if ((cpid = vfork()) < 0) {
-                        perror("fork error");
+                        perror("Fork error");
                         exit(EXIT_FAILURE);
                     } else if (cpid == 0) {
                         FILE     *fp;
@@ -240,7 +249,6 @@ watch_dir(int watch_fd, int mask)
                         free(cmd_string);
                         exit(EXIT_SUCCESS);
                     }
-
                 }
                 fclose(FP);
             } else if (event->mask & IN_DELETE) {
@@ -302,7 +310,7 @@ main(int argc,char *argv[])
     int                error;
     int                mask=IN_CREATE|IN_DELETE;
     init_daemon();
-    error = ini_parse("/usr/sbin/monitor_file_system/monitor_file_systemd.conf", handler, NULL);
+    error = ini_parse("/home/acm506/Inotify-recursive-monitor-folder/monitor_file_systemd.conf", handler, NULL);
     if (error < 0) {
         perror("Can't read config file");
         exit(EXIT_FAILURE);
@@ -311,6 +319,7 @@ main(int argc,char *argv[])
         perror("Bad config file !");
         exit(EXIT_FAILURE);
     }
+    //signal(SIGCHLD, sig_handler);
     // daemone(0,0); 系统调用
     watch_fd = watch_init(watch_directory, mask);
     for (;;) {
@@ -318,4 +327,3 @@ main(int argc,char *argv[])
     }
     exit(EXIT_SUCCESS);
 }
-
