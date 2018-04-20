@@ -1,4 +1,4 @@
-## Inotiry 递归监控目录
+## Inotify 递归监控目录
 
 ##### [使用inih读取配置文件](https://github.com/benhoyt/inih)
 
